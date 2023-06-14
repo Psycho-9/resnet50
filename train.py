@@ -2,12 +2,11 @@ import torch
 import torch.nn as nn
 from torchvision.transforms import transforms
 from torchvision import datasets, utils
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 import os
-
-
-
+import pickle
+import numpy as np
 
 # 定义resnet50使用的残差块Bottleneck
 class Bottleneck(nn.Module):
@@ -37,7 +36,6 @@ class Bottleneck(nn.Module):
         out += self.shortcut(x)
         out = F.relu(out)
         return out
-
 
 # 定义网络结构
 class Resnet50(nn.Module):
@@ -91,6 +89,56 @@ class Resnet50(nn.Module):
         return out
 
 
+# 使用datasets内置处理CIFAR10的库函数
+# training_data = datasets.CIFAR10(
+#     root="data",
+#     train=True,
+#     download=True,
+#     transform=transform
+# )
+#
+# testing_data = datasets.CIFAR10(
+#     root="data",
+#     train=False,
+#     download=True,
+#     transform=transform
+# )
+
+class CIFAR10Dataset(torch.utils.data.Dataset):
+    def __init__(self, root_dir, transform=None, train=True):
+        self.root_dir = root_dir
+        self.transform = transform
+
+        # 读取CIFAR-10训练集数据文件
+        self.data = []
+        self.labels = []
+        if train:
+            for i in range(1, 6):
+                file_path = os.path.join(self.root_dir, f'data_batch_{i}')
+                with open(file_path, 'rb') as f:
+                    data_binary = f.read()
+                    batch = pickle.loads(data_binary, encoding='bytes')
+                self.data.append(batch[b'data'])
+                self.labels += batch[b'labels']
+        else:
+            test_file_path = os.path.join(self.root_dir, 'test_batch')
+            with open(test_file_path, 'rb') as f:
+                data_binary = f.read()
+                test_batch = pickle.loads(data_binary, encoding='bytes')
+            self.test_data = test_batch[b'data']
+            self.test_labels = test_batch[b'labels']
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        img, label = self.data[index], self.labels[index]
+
+        if self.transform:
+            img = self.transform(img)
+
+        return img, label
+
+
 # 数据预处理，通过transforms处理后输入的大小为224*224*3，每个像素的值归一化到[-1,1]
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -101,19 +149,9 @@ transform = transforms.Compose([
     transforms.Resize((224, 224))
 ])
 
-training_data = datasets.CIFAR10(
-    root="data",
-    train=True,
-    download=True,
-    transform=transform
-)
+training_data = CIFAR10Dataset(root_dir='D:/resnet50/data/cifar-10-batches-py', transform=transform, train=True)
+testing_data = CIFAR10Dataset(root_dir='D:/resnet50/data/cifar-10-batches-py', transform=transform, train=False)
 
-testing_data = datasets.CIFAR10(
-    root="data",
-    train=False,
-    download=True,
-    transform=transform
-)
 
 # 定义网络
 res50 = Resnet50(Bottleneck)
@@ -133,7 +171,7 @@ loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # 加载训练集和数据集
-batch_size = 100
+batch_size = 50
 train_data = DataLoader(dataset=training_data, batch_size=batch_size, shuffle=True, drop_last=True)
 test_data = DataLoader(dataset=testing_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
