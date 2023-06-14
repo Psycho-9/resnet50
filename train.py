@@ -135,13 +135,18 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
         else:
             return len(self.test_data)
     def __getitem__(self, index):
-        img, label = self.data[index], self.labels[index]
+        if self.train:
+            img, label = self.data[index], self.labels[index]
+            if self.transform:
+                img = self.transform(img)
 
-        if self.transform:
-            img = self.transform(img)
+            return img, label
+        else:
+            img, label = self.test_data[index], self.test_labels[index]
+            if self.transform:
+                img = self.transform(img)
 
-        return img, label
-
+            return img, label
 
 # 数据预处理，通过transforms处理后输入的大小为224*224*3，每个像素的值归一化到[-1,1]
 transform = transforms.Compose([
