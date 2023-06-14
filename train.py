@@ -112,6 +112,8 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
         # 读取CIFAR-10训练集数据文件
         self.data = []
         self.labels = []
+        self.test_data=[]
+        self.test_labels=[]
         if self.train:
             for i in range(1, 6):
                 file_path = os.path.join(self.root_dir, f'data_batch_{i}')
