@@ -108,28 +108,30 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, transform=None, train=True):
         self.root_dir = root_dir
         self.transform = transform
-
+        self.train=train
         # 读取CIFAR-10训练集数据文件
         self.data = []
         self.labels = []
-        if train:
+        if self.train:
             for i in range(1, 6):
                 file_path = os.path.join(self.root_dir, f'data_batch_{i}')
                 with open(file_path, 'rb') as f:
                     data_binary = f.read()
                     batch = pickle.loads(data_binary, encoding='bytes')
-                self.data.append(batch[b'data'])
-                self.labels += batch[b'labels']
+                    self.data.append(batch[b'data'])
+                    self.labels += batch[b'labels']
         else:
             test_file_path = os.path.join(self.root_dir, 'test_batch')
             with open(test_file_path, 'rb') as f:
                 data_binary = f.read()
                 test_batch = pickle.loads(data_binary, encoding='bytes')
-            self.test_data = test_batch[b'data']
-            self.test_labels = test_batch[b'labels']
+                self.test_data = test_batch[b'data']
+                self.test_labels = test_batch[b'labels']
     def __len__(self):
-        return len(self.data)
-
+        if self.train:
+            return len(self.data)
+        else:
+            return len(self.test_data)
     def __getitem__(self, index):
         img, label = self.data[index], self.labels[index]
 
